@@ -33,8 +33,14 @@ for i in range(8):
     distance_sensors.append(sensor)
 
 
-state = "START"
+state = "FORWARD_1"
+motor_left.setPosition(float('inf'))
+motor_right.setPosition(float('inf'))
+motor_left.setVelocity(DRIVE_SPEED)
+motor_right.setVelocity(DRIVE_SPEED)
 
+# number of consecutive "no wall at left" in FOLLOW_WALL state
+counter = 0
 
 # Main loop:
 # - perform simulation steps until Webots is stopping the controller
@@ -43,13 +49,6 @@ while robot.step(timestep) != -1:
     wheel_left = wheel_sensor_left.getValue()
     wheel_right = wheel_sensor_right.getValue()
     
-    if state == "START":
-        state = "FORWARD_1"
-        motor_left.setPosition(float('inf'))
-        motor_right.setPosition(float('inf'))
-        motor_left.setVelocity(DRIVE_SPEED)
-        motor_right.setVelocity(DRIVE_SPEED)
-
     if state == "FORWARD_1":
         if (dist[0] + dist[7]) / 2 > DIST_5CM:
             state = "U_TURN"
@@ -72,11 +71,11 @@ while robot.step(timestep) != -1:
                 
     elif state == "TURN_RIGHT":
         if dist[5] > DIST_5CM:
-            state = "FORWARD_3"
+            state = "FOLLOW_WALL"
             motor_right.setVelocity(DRIVE_SPEED)
             motor_left.setVelocity(DRIVE_SPEED)
             
-    elif state == "FORWARD_3":
+    elif state == "FOLLOW_WALL":
         d7 = max(0, dist[7] - DIST_5CM)
         d6 = max(0, dist[6] - DIST_5CM)
         davg = d7 * 0.7 + d6 * 0.3        
@@ -85,7 +84,8 @@ while robot.step(timestep) != -1:
         motor_right.setVelocity(DRIVE_SPEED)
         motor_left.setVelocity(DRIVE_SPEED * m)
         
-        if dist[5] < DIST_5CM:
+        counter = counter + 1 if dist[5] < DIST_5CM else 0
+        if counter >= 5:
             state = "STOP"
             motor_right.setVelocity(0)
             motor_left.setVelocity(0)
